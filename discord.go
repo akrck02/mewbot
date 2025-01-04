@@ -11,7 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func Start() {
+func main() {
 	dg, err := discordgo.New("Bot " + configuration.Global.DiscordBotToken)
 	if err != nil {
 		panic(err)
@@ -40,10 +40,11 @@ func Start() {
 
 }
 
+// Set ready function
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 
-	// Set the playing status.
-	s.UpdateGameStatus(0, "meow meow meow meow meow meow meow...")
+  // Set the playing status.
+	s.UpdateGameStatus(1, "meow meow.")
 	commands.RegisterCommands(s)
 	commands.SetCommands(s)
 }

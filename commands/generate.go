@@ -19,14 +19,12 @@ type DalleMiniResponse struct {
 
 const DALLE_MINI_GENERATE_ENDPOINT = "https://bf.dallemini.ai/generate"
 
+// Generate image discord commands
 func GenerateImageCommand(session *discordgo.Session, interactionCreate *discordgo.InteractionCreate) {
-	options := interactionCreate.ApplicationCommandData().Options
-	generateImages(session, interactionCreate, options[0].StringValue())
-}
-
-// Generate images with dall-e mini
-func generateImages(session *discordgo.Session, interactionCreate *discordgo.InteractionCreate, prompt string) {
-
+	
+  // Get command options
+  options := interactionCreate.ApplicationCommandData().Options
+  prompt := options[0].StringValue()
 	log.Printf("Generating images with prompt: %s", prompt)
 
 	// Marshall input parameters
@@ -38,44 +36,64 @@ func generateImages(session *discordgo.Session, interactionCreate *discordgo.Int
 		log.Fatal(err)
 	}
 
+	// Create a new interaction and send images to discord chat
+	currentInteraction := discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Generating images for description '%s'", prompt),
+		},
+	}
+	session.InteractionRespond(interactionCreate.Interaction, &currentInteraction)
+
 	// Call dall-e mini api
 	result := callGenerateImageEndpoint(jsonData)
 	if nil == result {
 		log.Fatal("Error occurred on Dall-e mini API call, please try again later.")
 	}
 
-	// Convert images from base 64 to png
-	files := []*discordgo.File{}
-	for index, base64Image := range result.Images {
-		println(base64Image)
-		filename := fmt.Sprintf("image_%d.png", index)
-		image := util.GeneratePngFromBase64(filename, base64Image)
+	// Create the new data for the interaction
+  newMessage := fmt.Sprintf("Generated images for '%s'", prompt)
+  newContent := discordgo.WebhookEdit{
+		Content: &newMessage,
+		Files:  []*discordgo.File{},
+	}
 
+	// Convert images from base 64 to png
+	for index, base64Image := range result.Images {
+		
+    filename := fmt.Sprintf("image_%s_%d.png", interactionCreate.Interaction.ID, index)
+    filepath := fmt.Sprintf("tmp/%s", filename)
+		image := util.GeneratePngFromBase64(filepath, base64Image)
+
+    // if the image cannot be created, ignore
 		if nil == image {
 			break
 		}
+  
+    // Get image data as reader and remove the temporal file
+    var reader io.Reader = bytes.NewReader(image)
 
-		discordFile := convertPngImageToDiscordFile(filename, *image)
-		files = append(files, discordFile)
-	}
+    // Convert reader to discord file and add it to interaction
+	  discordFile := convertPngImageToDiscordFile(filename, *&reader)
+  	newContent.Files = append(newContent.Files, discordFile)
+  
+  }
 
-	// Create a new interaction and send images to discord chat
-	currentInteraction := discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("Generated images for description '%s'", prompt),
-			Files:   files,
-		},
-	}
-	session.InteractionRespond(interactionCreate.Interaction, &currentInteraction)
+	// Send the images to discord chat
+  _, err = session.InteractionResponseEdit(interactionCreate.Interaction, &newContent)
+  if nil != err {
+    log.Println(err.Error())
+  }
 }
 
 // Call dall-e mini api generate endpoint
 func callGenerateImageEndpoint(content []byte) *DalleMiniResponse {
 
 	response, err := http.Post(DALLE_MINI_GENERATE_ENDPOINT, "application/json", bytes.NewBuffer(content))
-	if nil != err {
-		err.Error()
+
+	//response, err := http.Get(DALLE_MINI_GENERATE_ENDPOINT)
+  if nil != err {
+		print(err.Error())
 		return nil
 	}
 	defer response.Body.Close()
