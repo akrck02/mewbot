@@ -1,22 +1,32 @@
-# Download base image ubuntu 22.04
-FROM node:18
+FROM golang:1.23-bookworm AS base
 
 # LABEL about the custom image
 LABEL maintainer="akrck02@gmail.com"
-LABEL version="0.1"
+LABEL version="0.2"
 LABEL description="This is a custom Docker Image for mewbot execution"
 
 RUN mkdir -p /home/app/mewbot
+RUN touch /home/app/mewbot/.env
 
-# Create app directory
-WORKDIR /home/app
+ENV DISCORD_BOT_TOKEN="none"
 
-# install git
-RUN apt-get update && apt-get install -y git
+# Move to working directory /build
+WORKDIR /build
 
-# Create app directory
-WORKDIR /home/app/mewbot
+# Copy the go.mod and go.sum files to the /build directory
+COPY go.mod go.sum ./
 
-# Clone the mewbot repository
-COPY start.sh /home/app/mewbot/start.sh
-CMD ["sh","start.sh"]
+# Install dependencies
+RUN go mod download
+
+# Copy the entire source code into the container
+COPY . .
+
+# Build the application
+RUN go build -o mewbot
+
+
+# Start the application
+CMD ["/build/mewbot"]
+
+
