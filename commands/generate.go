@@ -90,8 +90,6 @@ func GenerateImageCommand(session *discordgo.Session, interactionCreate *discord
 func callGenerateImageEndpoint(content []byte) *DalleMiniResponse {
 
 	response, err := http.Post(DALLE_MINI_GENERATE_ENDPOINT, "application/json", bytes.NewBuffer(content))
-
-	//response, err := http.Get(DALLE_MINI_GENERATE_ENDPOINT)
   if nil != err {
 		print(err.Error())
 		return nil

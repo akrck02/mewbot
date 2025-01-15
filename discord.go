@@ -12,7 +12,8 @@ import (
 )
 
 func main() {
-	dg, err := discordgo.New("Bot " + configuration.Global.DiscordBotToken)
+
+  dg, err := discordgo.New("Bot " + configuration.Global.DiscordBotToken)
 	if err != nil {
 		panic(err)
 	}
@@ -37,7 +38,6 @@ func main() {
 
 	// Cleanly close down the Discord session.
 	dg.Close()
-
 }
 
 // Set ready function
@@ -45,6 +45,6 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 
   // Set the playing status.
 	s.UpdateGameStatus(1, "meow meow.")
-	commands.RegisterCommands(s)
+	commands.SyncCommands(s, "")
 	commands.SetCommands(s)
 }
